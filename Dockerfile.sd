@@ -30,7 +30,10 @@ RUN pip install -r requirements.txt 2>&1 | tail -1 || echo "Dependencies install
 
 # Create model directories
 RUN mkdir -p models/checkpoints models/clip models/vae models/loras models/controlnet && \
-    mkdir -p output
+    mkdir -p output && mkdir -p user/default && mkdir -p user/workflows
+
+# Create a simple default workflow that doesn't require external models
+RUN echo '{}' > user/default/workflow.json
 
 # Expose port  
 EXPOSE 8188

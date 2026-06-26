@@ -7,10 +7,10 @@ A complete local AI setup running **Ollama** (LLM), **Open WebUI** (Chat Interfa
 - 🧠 **Ollama**: Run large language models locally (Llama2, Mistral, Neural-Chat, etc.)
 - 💬 **Open WebUI**: Beautiful, responsive chat interface with RAG (Retrieval-Augmented Generation)
 - 🔍 **SearXNG**: Privacy-focused web search engine
-- 🎨 **ComfyUI**: Stable Diffusion for local image generation (text-to-image, inpainting, upscaling)
 - 🔐 **User Authentication**: Secure multi-user support
 - 📚 **RAG Support**: Upload PDFs and documents for context-aware answers
 - 🌐 **Web Search Integration**: Get latest information directly in chat
+- 🎨 **ComfyUI** (Optional): Stable Diffusion for local image generation (see [IMAGE_GENERATION.md](IMAGE_GENERATION.md) for setup)
 
 ## 📋 Requirements
 
@@ -48,12 +48,15 @@ Services should be healthy within 30-40 seconds.
 
 ### 4. Access the Interfaces
 
-| Service | URL | Purpose |
-|---------|-----|---------|
-| **Open WebUI** | http://localhost:3000 | Chat interface with RAG & search |
-| **ComfyUI** | http://localhost:8188 | Image generation (Stable Diffusion) |
-| **Ollama API** | http://localhost:11434 | LLM backend (API) |
-| **SearXNG** | http://localhost:8081 | Web search engine |
+| Service | URL | Purpose | Status |
+|---------|-----|---------|--------|
+| **Open WebUI** | http://localhost:3000 | Chat interface with RAG & search | ✅ Active |
+| **Ollama API** | http://localhost:11434 | LLM backend (API) | ✅ Active |
+| **SearXNG** | http://localhost:8081 | Web search engine | ✅ Active |
+| **ComfyUI** (Optional) | http://localhost:8188 | Image generation | ⏸️ Disabled by default |
+
+**To enable ComfyUI (image generation):**
+See [IMAGE_GENERATION.md](IMAGE_GENERATION.md) for detailed setup instructions.
 
 ## 📥 Pull Your First Model
 
@@ -77,26 +80,6 @@ docker exec ollama ollama pull dolphin
 Check available models:
 ```bash
 docker exec ollama ollama list
-```
-
-### Download Stable Diffusion Models
-
-Once Stable Diffusion WebUI is running, download models directly in the web interface:
-
-1. Go to http://localhost:7860
-2. Click **Model** tab
-3. Select from available models:
-   - **Stable Diffusion XL** (1.0): Best quality (~7GB)
-   - **Stable Diffusion 1.5**: Fast and reliable (~4GB)
-   - **Proteus v0.2**: Fast & creative (~4GB)
-
-Or download via command line:
-```bash
-# Automatic downloads on first use
-# Models stored in docker volume: sd_models
-
-# View available space
-docker exec stable-diffusion-webui df -h
 ```
 
 ## 🎮 How to Use
