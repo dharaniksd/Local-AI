@@ -68,24 +68,24 @@ services:
   # -------------------------
   # To enable: uncomment below and run: docker-compose up -d stable-diffusion-webui
   # Note: Requires downloading models first (see README.md)
-  # stable-diffusion-webui:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.sd
-  #   container_name: stable-diffusion-webui
-  #   networks:
-  #     - local-ai
-  #   ports:
-  #     - "8188:8188"
-  #   volumes:
-  #     - sd_models:/app/models
-  #     - sd_outputs:/app/output
-  #   restart: unless-stopped
-  #   environment:
-  #     - TORCH_DEVICE=cpu
-  #     - TORCH_BACKEND=upsample
-  #     - COMFYUI_FORCE_CPU=true
-  #     - CUDA_VISIBLE_DEVICES=
+  stable-diffusion-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile.sd
+    container_name: stable-diffusion-webui
+    networks:
+      - local-ai
+    ports:
+      - "8188:8188"
+    volumes:
+      - sd_models:/app/models
+      - sd_outputs:/app/output
+    restart: unless-stopped
+    environment:
+      - TORCH_DEVICE=cpu
+      - TORCH_BACKEND=upsample
+      - COMFYUI_FORCE_CPU=true
+      - CUDA_VISIBLE_DEVICES=
 
 volumes:
   ollama_data:
