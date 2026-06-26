@@ -7,9 +7,11 @@ A complete local AI setup running **Ollama** (LLM), **Open WebUI** (Chat Interfa
 - 🧠 **Ollama**: Run large language models locally (Llama2, Mistral, Neural-Chat, etc.)
 - 💬 **Open WebUI**: Beautiful, responsive chat interface with RAG (Retrieval-Augmented Generation)
 - 🔍 **SearXNG**: Privacy-focused web search engine
+- 🎨 **Stable Diffusion**: Generate and edit images locally with SDXL & 1.5
 - 🔐 **User Authentication**: Secure multi-user support
 - 📚 **RAG Support**: Upload PDFs and documents for context-aware answers
 - 🌐 **Web Search Integration**: Get latest information directly in chat
+- 🖼️ **Image Editing**: Inpaint, upscale, and enhance images
 
 ## 📋 Requirements
 
@@ -17,6 +19,9 @@ A complete local AI setup running **Ollama** (LLM), **Open WebUI** (Chat Interfa
 - **Docker Compose**: Comes with Docker Desktop
 - **RAM**: Minimum 8GB (16GB+ recommended for better performance)
 - **Disk Space**: 10GB+ for models and volumes
+- **GPU** (Recommended): 
+  - NVIDIA GPU with CUDA support for faster image generation
+  - Without GPU: CPU-only mode (slower, but still works)
 
 ## 🚀 Quick Start
 
@@ -49,6 +54,7 @@ Services should be healthy within 30-40 seconds.
 | **Open WebUI** | http://localhost:3000 | Chat interface |
 | **Ollama API** | http://localhost:11434 | LLM backend (API) |
 | **SearXNG** | http://localhost:8081 | Web search engine |
+| **Stable Diffusion** | http://localhost:7860 | Image generation |
 
 ## 📥 Pull Your First Model
 
@@ -74,6 +80,26 @@ Check available models:
 docker exec ollama ollama list
 ```
 
+### Download Stable Diffusion Models
+
+Once Stable Diffusion WebUI is running, download models directly in the web interface:
+
+1. Go to http://localhost:7860
+2. Click **Model** tab
+3. Select from available models:
+   - **Stable Diffusion XL** (1.0): Best quality (~7GB)
+   - **Stable Diffusion 1.5**: Fast and reliable (~4GB)
+   - **Proteus v0.2**: Fast & creative (~4GB)
+
+Or download via command line:
+```bash
+# Automatic downloads on first use
+# Models stored in docker volume: sd_models
+
+# View available space
+docker exec stable-diffusion-webui df -h
+```
+
 ## 🎮 How to Use
 
 ### Chat with Local Models
@@ -91,6 +117,22 @@ docker exec ollama ollama list
 1. Click the **📎 Attachment** button
 2. Upload PDFs, TXT, or other documents
 3. The model will reference these documents for context-aware answers
+
+### Generate Images (Stable Diffusion)
+1. Go to http://localhost:7860
+2. Enter your image description in the prompt box
+3. Click **Generate** to create images
+4. Adjust settings:
+   - **Steps**: 20-50 (more = higher quality but slower)
+   - **Guidance Scale**: 7-15 (how strictly to follow prompt)
+   - **Seed**: Leave blank for random, or set for reproducibility
+5. Download generated images from the output panel
+
+### Image Editing Features
+- **Inpaint**: Modify parts of existing images
+- **Upscale**: Enlarge images with AI enhancement
+- **Face Fix**: Improve facial details with GFPGAN
+- **Batch Processing**: Generate multiple variations
 
 ## 🛠️ Advanced Configuration
 
@@ -117,6 +159,18 @@ environment:
   - BASE_URL=http://localhost:8081/
   - INSTANCE_NAME=Local-AI-Search
   - AUTOCOMPLETE=google
+```
+
+### Stable Diffusion Configuration
+Optimize image generation in `docker-compose.yml`:
+```bash
+environment:
+  - GRADIO_QUEUE_SIZE=32        # Max concurrent requests
+  - GRADIO_MAX_SIZE=200         # Max upload size (MB)
+  - CUDA_VISIBLE_DEVICES=0      # GPU selection (0=first GPU, -1=CPU only)
+  
+# For CPU-only mode:
+  - CUDA_VISIBLE_DEVICES=-1
 ```
 
 ## 📊 Architecture Diagram
@@ -192,9 +246,11 @@ docker-compose down
 docker-compose logs -f open-webui
 docker-compose logs -f ollama
 docker-compose logs -f searxng
+docker-compose logs -f stable-diffusion-webui
 
 # Restart a service
 docker-compose restart open-webui
+docker-compose restart stable-diffusion-webui
 
 # Check service health
 docker-compose ps
@@ -205,11 +261,17 @@ docker exec ollama ollama pull <model-name>
 # List available models
 docker exec ollama ollama list
 
+# Check Stable Diffusion logs
+docker logs stable-diffusion-webui
+
 # Remove all containers (WARNING: keeps volumes)
 docker-compose down
 
 # Full cleanup (removes containers & volumes - CAUTION!)
 docker-compose down -v
+
+# Monitor resource usage
+docker stats
 ```
 
 ## 🐛 Troubleshooting
@@ -231,15 +293,33 @@ docker-compose logs ollama
 - Models will still search using other engines
 - Safe to ignore
 
-### Slow responses
-- Models need time to load first time
-- Check available RAM: `docker stats`
-- Consider smaller models (mistral, neural-chat)
+### Stable Diffusion won't start
+```bash
+# Check logs
+docker logs stable-diffusion-webui
 
-### Out of memory
-- Reduce `OLLAMA_MAX_LOADED_MODELS` in docker-compose.yml
-- Use smaller models (7B instead of 13B/70B)
-- Close other applications
+# Verify GPU (if using NVIDIA)
+docker exec stable-diffusion-webui nvidia-smi
+
+# Check disk space (models need 5-10GB)
+docker exec stable-diffusion-webui df -h
+
+# For GPU issues, switch to CPU mode:
+# Edit docker-compose.yml: CUDA_VISIBLE_DEVICES=-1
+```
+
+### Image generation is slow
+- First generation takes time to load models
+- Use a smaller model (Stable Diffusion 1.5 vs XL)
+- Reduce Steps from 50 to 20
+- Enable GPU acceleration (NVIDIA CUDA)
+- Close other heavy applications
+
+### VRAM/Memory errors
+- Reduce batch size in Stable Diffusion settings
+- Use smaller model
+- Enable CPU offloading in advanced options
+- Monitor with: `docker stats`
 
 ## 📚 Recommended Models
 
@@ -262,6 +342,7 @@ docker-compose logs ollama
 - [Ollama Docs](https://github.com/ollama/ollama)
 - [Open WebUI Docs](https://docs.openwebui.com/)
 - [SearXNG Docs](https://docs.searxng.org/)
+- [📊 Image Generation Architecture](IMAGE_GENERATION.md) - Detailed Stable Diffusion setup & flows
 
 ## 🤝 Contributing
 

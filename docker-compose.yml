@@ -85,6 +85,33 @@ services:
       retries: 3
       start_period: 40s
 
+  # -------------------------
+  # 🎨 Stable Diffusion WebUI (Image Generation)
+  # -------------------------
+  stable-diffusion-webui:
+    image: ghcr.io/absolute-quantum/stable-diffusion-webui:latest
+    container_name: stable-diffusion-webui
+    networks:
+      - local-ai
+    ports:
+      - "7860:7860"
+    environment:
+      - GRADIO_QUEUE_SIZE=32
+      - GRADIO_MAX_SIZE=200
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - sd_models:/app/models
+      - sd_outputs:/app/outputs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 volumes:
   ollama_data:
   openwebui_data:
+  sd_models:
+  sd_outputs:
