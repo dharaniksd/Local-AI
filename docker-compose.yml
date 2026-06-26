@@ -1,0 +1,90 @@
+version: "3.9"
+
+networks:
+  local-ai:
+    driver: bridge
+
+services:
+
+  # -------------------------
+  # 🧠 Ollama (Local LLM)
+  # -------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    networks:
+      - local-ai
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_MAX_LOADED_MODELS=2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # -------------------------
+  # 💬 Open WebUI (Chat UI)
+  # -------------------------
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    networks:
+      - local-ai
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - ENABLE_SEARCH=true
+      - SEARXNG_BASE_URL=http://searxng:8081
+      - RAG_TOP_K=10
+      - RAG_RELEVANCE_THRESHOLD=0.3
+      - PDF_EXTRACT_IMAGES=true
+    depends_on:
+      ollama:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    volumes:
+      - openwebui_data:/app/backend/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # -------------------------
+  # 🌐 SearXNG (Web Search)
+  # -------------------------
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    networks:
+      - local-ai
+    ports:
+      - "8081:8080"
+    environment:
+      - BASE_URL=http://localhost:8081/
+      - INSTANCE_NAME=Local-AI-Search
+      - ENABLE_METRICS=false
+      - AUTOCOMPLETE=google
+      - RESULTS_ON_NEW_TAB=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  ollama_data:
+  openwebui_data:
