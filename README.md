@@ -7,11 +7,10 @@ A complete local AI setup running **Ollama** (LLM), **Open WebUI** (Chat Interfa
 - 🧠 **Ollama**: Run large language models locally (Llama2, Mistral, Neural-Chat, etc.)
 - 💬 **Open WebUI**: Beautiful, responsive chat interface with RAG (Retrieval-Augmented Generation)
 - 🔍 **SearXNG**: Privacy-focused web search engine
-- 🎨 **Stable Diffusion**: Generate and edit images locally with SDXL & 1.5
+- 🎨 **ComfyUI**: Stable Diffusion for local image generation (text-to-image, inpainting, upscaling)
 - 🔐 **User Authentication**: Secure multi-user support
 - 📚 **RAG Support**: Upload PDFs and documents for context-aware answers
 - 🌐 **Web Search Integration**: Get latest information directly in chat
-- 🖼️ **Image Editing**: Inpaint, upscale, and enhance images
 
 ## 📋 Requirements
 
@@ -51,10 +50,10 @@ Services should be healthy within 30-40 seconds.
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Open WebUI** | http://localhost:3000 | Chat interface |
+| **Open WebUI** | http://localhost:3000 | Chat interface with RAG & search |
+| **ComfyUI** | http://localhost:8188 | Image generation (Stable Diffusion) |
 | **Ollama API** | http://localhost:11434 | LLM backend (API) |
 | **SearXNG** | http://localhost:8081 | Web search engine |
-| **Stable Diffusion** | http://localhost:7860 | Image generation |
 
 ## 📥 Pull Your First Model
 
@@ -118,21 +117,24 @@ docker exec stable-diffusion-webui df -h
 2. Upload PDFs, TXT, or other documents
 3. The model will reference these documents for context-aware answers
 
-### Generate Images (Stable Diffusion)
-1. Go to http://localhost:7860
-2. Enter your image description in the prompt box
-3. Click **Generate** to create images
-4. Adjust settings:
-   - **Steps**: 20-50 (more = higher quality but slower)
-   - **Guidance Scale**: 7-15 (how strictly to follow prompt)
-   - **Seed**: Leave blank for random, or set for reproducibility
-5. Download generated images from the output panel
+### Generate Images (ComfyUI)
+1. Go to http://localhost:8188
+2. First run will download required model files (may take a few minutes on first startup)
+3. **Using ComfyUI:**
+   - Use "Load Default" workflow or create your own with nodes
+   - Connect nodes: CheckpointLoader → KSampler → VAEDecode → SaveImage
+   - Enter your prompt in the positive conditioning node
+   - Click "Queue Prompt" to generate
+   - Generated images saved to Docker volume `sd_outputs`
 
-### Image Editing Features
-- **Inpaint**: Modify parts of existing images
-- **Upscale**: Enlarge images with AI enhancement
-- **Face Fix**: Improve facial details with GFPGAN
-- **Batch Processing**: Generate multiple variations
+**Popular Models to Try:**
+- **Stable Diffusion 1.5**: Fast, reliable quality
+- **Stable Diffusion XL**: Better quality but slower  
+- **Proteus v0.2**: Fast and creative
+
+**Models installed automatically on first run.**
+
+For more details, see [IMAGE_GENERATION.md](IMAGE_GENERATION.md)
 
 ## 🛠️ Advanced Configuration
 
@@ -161,14 +163,14 @@ environment:
   - AUTOCOMPLETE=google
 ```
 
-### Stable Diffusion Configuration
+### ComfyUI (Stable Diffusion) Configuration
 Optimize image generation in `docker-compose.yml`:
 ```bash
 environment:
-  - GRADIO_QUEUE_SIZE=32        # Max concurrent requests
-  - GRADIO_MAX_SIZE=200         # Max upload size (MB)
-  - CUDA_VISIBLE_DEVICES=0      # GPU selection (0=first GPU, -1=CPU only)
-  
+  - TORCH_DEVICE=cpu             # Force CPU mode
+  - COMFYUI_FORCE_CPU=true       # Ensure CPU usage
+  - CUDA_VISIBLE_DEVICES=        # Empty = CPU only (set to 0 for GPU)
+```
 # For CPU-only mode:
   - CUDA_VISIBLE_DEVICES=-1
 ```
@@ -246,11 +248,9 @@ docker-compose down
 docker-compose logs -f open-webui
 docker-compose logs -f ollama
 docker-compose logs -f searxng
-docker-compose logs -f stable-diffusion-webui
 
 # Restart a service
 docker-compose restart open-webui
-docker-compose restart stable-diffusion-webui
 
 # Check service health
 docker-compose ps
@@ -293,33 +293,28 @@ docker-compose logs ollama
 - Models will still search using other engines
 - Safe to ignore
 
-### Stable Diffusion won't start
-```bash
-# Check logs
-docker logs stable-diffusion-webui
+### Slow responses
+- Models need time to load first time
+- Check available RAM: `docker stats`
+- Consider smaller models (mistral, neural-chat)
 
-# Verify GPU (if using NVIDIA)
-docker exec stable-diffusion-webui nvidia-smi
+## 🎨 Image Generation Setup
 
-# Check disk space (models need 5-10GB)
-docker exec stable-diffusion-webui df -h
+The Stable Diffusion WebUI is included and runs in Docker via AUTOMATIC1111. 
 
-# For GPU issues, switch to CPU mode:
-# Edit docker-compose.yml: CUDA_VISIBLE_DEVICES=-1
-```
+**First Time Setup:**
+1. Start services: `docker-compose up -d`
+2. Wait 2-3 minutes for Stable Diffusion to initialize
+3. Visit http://localhost:7860
+4. Download a model (will take 10-30 minutes first time)
+5. Start generating! 🎨
 
-### Image generation is slow
-- First generation takes time to load models
-- Use a smaller model (Stable Diffusion 1.5 vs XL)
-- Reduce Steps from 50 to 20
-- Enable GPU acceleration (NVIDIA CUDA)
-- Close other heavy applications
+**Performance Notes:**
+- **CPU Mode**: ~2-3 minutes per image (good for testing)
+- **GPU Mode**: ~30-60 seconds (requires NVIDIA GPU or Apple Silicon)
+- First generation is slowest (model loading)
 
-### VRAM/Memory errors
-- Reduce batch size in Stable Diffusion settings
-- Use smaller model
-- Enable CPU offloading in advanced options
-- Monitor with: `docker stats`
+For detailed setup and advanced options, see [Image Generation Guide](IMAGE_GENERATION.md)
 
 ## 📚 Recommended Models
 

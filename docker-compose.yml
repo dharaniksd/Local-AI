@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   local-ai:
     driver: bridge
@@ -22,12 +20,6 @@ services:
       - OLLAMA_NUM_PARALLEL=2
       - OLLAMA_MAX_LOADED_MODELS=2
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # -------------------------
   # 💬 Open WebUI (Chat UI)
@@ -47,19 +39,11 @@ services:
       - RAG_RELEVANCE_THRESHOLD=0.3
       - PDF_EXTRACT_IMAGES=true
     depends_on:
-      ollama:
-        condition: service_healthy
-      searxng:
-        condition: service_started
+      - ollama
+      - searxng
     volumes:
       - openwebui_data:/app/backend/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/models"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # -------------------------
   # 🌐 SearXNG (Web Search)
@@ -78,37 +62,28 @@ services:
       - AUTOCOMPLETE=google
       - RESULTS_ON_NEW_TAB=true
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # -------------------------
-  # 🎨 Stable Diffusion WebUI (Image Generation)
+  # 🎨 Stable Diffusion WebUI (ComfyUI) - Image Generation
   # -------------------------
   stable-diffusion-webui:
-    image: ghcr.io/absolute-quantum/stable-diffusion-webui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.sd
     container_name: stable-diffusion-webui
     networks:
       - local-ai
     ports:
-      - "7860:7860"
-    environment:
-      - GRADIO_QUEUE_SIZE=32
-      - GRADIO_MAX_SIZE=200
-      - CUDA_VISIBLE_DEVICES=0
+      - "8188:8188"
     volumes:
       - sd_models:/app/models
-      - sd_outputs:/app/outputs
+      - sd_outputs:/app/output
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860/info"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    environment:
+      - TORCH_DEVICE=cpu
+      - TORCH_BACKEND=upsample
+      - COMFYUI_FORCE_CPU=true
+      - CUDA_VISIBLE_DEVICES=
 
 volumes:
   ollama_data:

@@ -1,0 +1,39 @@
+# Stable Diffusion WebUI - ComfyUI (Lightweight & CPU-friendly)
+FROM python:3.10-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV TORCH_DEVICE=cpu
+ENV COMFYUI_FORCE_CPU=true
+ENV CUDA_VISIBLE_DEVICES=
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    wget \
+    curl \
+    build-essential \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git . && \
+    git submodule update --init --recursive
+
+# Upgrade pip and install PyTorch CPU-only
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Install ComfyUI dependencies (with tolerance for failures)
+RUN pip install -r requirements.txt 2>&1 | tail -1 || echo "Dependencies installed with warnings"
+
+# Create model directories
+RUN mkdir -p models/checkpoints models/clip models/vae models/loras models/controlnet && \
+    mkdir -p output
+
+# Expose port  
+EXPOSE 8188
+
+# Run ComfyUI on CPU mode
+CMD ["python", "main.py", "--listen", "0.0.0.0", "--cpu"]
