@@ -1,0 +1,7 @@
+FROM ollama/ollama:latest
+
+# ffprobe/ffmpeg are required by Ollama multimodal helpers to decode
+# uploaded image/audio/video buffers in some request paths.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,143 @@
+networks:
+  local-ai:
+    driver: bridge
+
+services:
+
+  # -------------------------
+  # 🧠 Ollama (Local LLM)
+  # -------------------------
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    image: local-ai-ollama:latest
+    container_name: ollama
+    networks:
+      - local-ai
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    gpus: all
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_CONTEXT_LENGTH=3072
+      - OLLAMA_KEEP_ALIVE=30m
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    restart: unless-stopped
+
+  # -------------------------
+  # 📦 Ollama Model Bootstrap
+  # -------------------------
+  # Pulls default text + vision models so Open WebUI can handle image analysis.
+  ollama-model-init:
+    image: curlimages/curl:8.9.1
+    container_name: ollama-model-init
+    networks:
+      - local-ai
+    depends_on:
+      - ollama
+    command: >
+      sh -c "
+      until curl -sf http://ollama:11434/api/tags > /dev/null; do
+        echo 'Waiting for Ollama API...';
+        sleep 2;
+      done;
+      echo 'Pulling default model llama3.2...';
+      curl -sS -X POST http://ollama:11434/api/pull
+      -H 'Content-Type: application/json'
+      -d '{\"name\":\"llama3.2\",\"stream\":false}';
+      echo 'Pulling vision model llava:7b...';
+      curl -sS -X POST http://ollama:11434/api/pull
+      -H 'Content-Type: application/json'
+      -d '{\"name\":\"llava:7b\",\"stream\":false}';
+      "
+    restart: "no"
+
+  # -------------------------
+  # 💬 Open WebUI (Chat UI)
+  # -------------------------
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    networks:
+      - local-ai
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DEFAULT_MODELS=llama3.2,llava:7b
+      - ENABLE_WEB_SEARCH=false
+      - USER_PERMISSIONS_FEATURES_WEB_SEARCH=true
+      - ENABLE_SEARCH_QUERY_GENERATION=false
+      - WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://searxng:8080/search
+      - WEB_SEARCH_RESULT_COUNT=2
+      - RAG_TOP_K=3
+      - RAG_RELEVANCE_THRESHOLD=0.3
+      - PDF_EXTRACT_IMAGES=true
+    depends_on:
+      ollama:
+        condition: service_started
+      ollama-model-init:
+        condition: service_completed_successfully
+      searxng:
+        condition: service_started
+    volumes:
+      - openwebui_data:/app/backend/data
+    restart: unless-stopped
+
+  # -------------------------
+  # 🌐 SearXNG (Web Search)
+  # -------------------------
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    networks:
+      - local-ai
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - BASE_URL=http://localhost:8081/
+      - INSTANCE_NAME=Local-AI-Search
+      - ENABLE_METRICS=false
+      - AUTOCOMPLETE=google
+      - RESULTS_ON_NEW_TAB=true
+    restart: unless-stopped
+
+  # -------------------------
+  # 🎨 Stable Diffusion WebUI (ComfyUI) - Image Generation (OPTIONAL - Disabled)
+  # -------------------------
+  # To enable: uncomment below and run: docker-compose up -d stable-diffusion-webui
+  # Note: Requires downloading models first (see README.md)
+  stable-diffusion-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile.sd
+    container_name: stable-diffusion-webui
+    networks:
+      - local-ai
+    ports:
+      - "8188:8188"
+    volumes:
+      - sd_models:/app/models
+      - sd_outputs:/app/output
+    gpus: all
+    restart: unless-stopped
+    environment:
+      - TORCH_DEVICE=cuda
+      - COMFYUI_FORCE_CPU=false
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+volumes:
+  ollama_data:
+  openwebui_data:
+  sd_models:
+  sd_outputs:
