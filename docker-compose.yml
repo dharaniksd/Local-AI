@@ -69,7 +69,10 @@ services:
       - "3000:8080"
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - DEFAULT_MODELS=llama3.2,llava:7b
+      - DEFAULT_MODELS=llama3.2
+      - TASK_MODEL=llama3.2
+      - TASK_MODEL_EXTERNAL=llama3.2
+      - DEFAULT_MODEL_PARAMS={"function_calling":"legacy"}
       - ENABLE_WEB_SEARCH=false
       - USER_PERMISSIONS_FEATURES_WEB_SEARCH=true
       - ENABLE_SEARCH_QUERY_GENERATION=false
@@ -101,7 +104,7 @@ services:
     ports:
       - "8081:8080"
     volumes:
-      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - ./searxng:/etc/searxng
     environment:
       - BASE_URL=http://localhost:8081/
       - INSTANCE_NAME=Local-AI-Search
